@@ -180,6 +180,20 @@ Serial收集器对于运行在客户端模式下的虚拟机来说是一个很�
 
 ​    它默认开启的收集线程数与处理器核心数量相同，在处理器核心非常多，可以使用-XX：ParallelGCThreads参数来限制垃圾收集的线程数。自JDK 9开始，ParNew加CMS收集器的组合就不再是官方推荐的服务端模式下的收集器解决方案了。官方希望它能完全被G1所取代，甚至还取消了ParNew加 Serial Old以及Serial加CMS这两组收集器组合的支持，并直接取消了XX:+UseParNewGC参数，这意味着ParNew和CMS从此只能互相搭配使用，再也没有其他收集器能够和它们配合了。
 
+#### Parallel Scavenge收集器
+
+​     Parallel Scavenge收集器也是一款新生代收集器，它同样是基于标记-复制算法实现的收集器，也是能够并行收集的多线程收集器。Parallel Scavenge收集器的特点是它的关注点与其他收集器不同，CMS等收集器的关注点是尽可能地缩短垃圾收集时用户线程的停顿时间，而Parallel Scavenge收集器的目标则是达到一个可控制的吞吐量（Throughput）。
+
+吞吐量就是处理器用于运行用户代码的时间与处理器总消耗时间（运行用户代码的时+运行垃圾收集时间）的比值
+
+Parallel Scavenge收集器提供了两个参数用于精确控制吞吐量，分别是控制最大垃圾收集停顿时间 的-XX:MaxGCPauseMillis参数以及直接设置吞吐量大小的-XX:GCTimeRatio参数。
+
+-XX:MaxGCPauseMillis参数允许的值是一个大于0的毫秒数，收集器将尽力保证内存回收花费的 时间不超过用户设定值
+
+-XX：GCTimeRatio参数的值则应当是一个大于0小于100的整数，也就是垃圾收集时间占总时间的 比率，相当于吞吐量的倒数
+
+除上述两个 参数之外，Parallel Scavenge收集器还有一个参数-XX：+UseAdaptiveSizePolicy。这是一 个开关参数，当这个参数被激活之后，就不需要人工指定新生代的大小（-Xmn）、Eden与Survivor区 的比例（-XX：SurvivorRatio）、晋升老年代对象大小（-XX：PretenureSizeThreshold）等细节参数 了，虚拟机会根据当前系统的运行情况收集性能监控信息，动态调整这些参数以提供最合适的停顿时间或者最大的吞吐量。这种调节方式称为垃圾收集的自适应的调节策略（GC Ergonomics）。
+
 ### Java虚拟机命令行工具
 
 1. jps 查看虚拟机内的进程 命令格式 jps [optins] [hostid]
