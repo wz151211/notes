@@ -1,6 +1,3 @@
----
-typora-root-url: ./images
----
 
 ### InnoDB行格式
 
@@ -20,7 +17,7 @@ typora-root-url: ./images
 
 ​              一条完整的记录其实可以被分为 **记录的额外信息** 和 **记录的真实数据** 两部分
 
-![](/COMPACT行格式.png)
+![](./images/COMPACT行格式.png)
 
 ###### 变长字段长度列表
 
@@ -73,7 +70,7 @@ typora-root-url: ./images
 
 记录头信息是由固定的 5 个字节组成。 5 个字节也就是 40 个二进制位，不同的位代表不同的意思，如图
 
-![](/记录头信息.jpg)
+![](./images/记录头信息.jpg)
 
 | 名称         | 大小（单位：bit） | 描述                                                         |
 | ------------ | ----------------- | ------------------------------------------------------------ |
@@ -98,7 +95,7 @@ typora-root-url: ./images
 | transaction_id（DB_TRX_ID） | 是       | 6 字节   | 事务ID                 |
 | roll_pointer（DB_ROLL_PTR） | 是       | 7字节    | 回滚指针               |
 
-![](/记录的真实数据.jpg)
+![](./images/记录的真实数据.jpg)
 
  InnoDB 表对主键的生成策略：优先使用用户自定义主键作为主键，如果用户没有定义主键，则选取一个 Unique 键作为主键，如果表中连 Unique 键都没有定义的话，则 InnoDB 会为表默认添加一个名为 row_id 的隐藏列作为主键，row_id 是可选的（在没有自定义主键以及Unique键的情况下才会添加该列）。
 
@@ -112,7 +109,7 @@ typora-root-url: ./images
 
 ​    数据页是InnoDB 管理存储空间的基本单位，一个页的大小一般是 16KB
 
-​     <img src="/InnoDB数据页结构.png" style="zoom: 67%;" />
+​     <img src="./images/InnoDB数据页结构.png" style="zoom: 67%;" />
 
 从图中可以看出，一个 InnoDB 数据页的存储空间大致被划分成了 7 个部分，有的部分占用的字节数是确定的， 有的部分占用的字节数是不确定的,，每列代表的含义如下：
 
@@ -130,7 +127,7 @@ typora-root-url: ./images
 
 在页的7个组成部分中，我们自己存储的记录会按照我们指定的 行格式 存储到 User Records 部分。但是在一开 始生成页的时候，其实并没有 User Records 这个部分，每当我们插入一条记录，都会从 Free Space 部分中申请一个记录大小的空间划分到 User Records 部分，当 Free Space 部分的空间全部 被 User Records 部分替代掉之后，也就意味着这个页使用完了，如果还有新的记录插入的话，就需要去申请新 的页了，这个过程的图示如下：
 
-![ User Records](/记录在页中的存储.png)
+![ User Records](./images/记录在页中的存储.png)
 
 ​       InnoDB根据行格式里的记录头信息来管理 User Records区域
 
