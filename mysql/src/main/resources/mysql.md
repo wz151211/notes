@@ -137,7 +137,80 @@
 
 - heap_no
 
+
+
 #### Page Directory（页目录）
 
+为了能得到一个数据页中存储的记录的状态信息，特意在页中定义了一个叫 Page Header 的部分，它是页结构的第二部分，这个部分占用固定的 56 个字节，专门存储各种状态信息。
+
+| 名称              | 占用空间大小 | 描述                                                         |
+| ----------------- | ------------ | ------------------------------------------------------------ |
+| PAGE_N_DIR_SLOTS  | 2 字节       | 在页目录中的槽数量                                           |
+| PAGE_HEAP_TOP     | 2 字节       | 还未使用的空间最小地址，也就是说从该地址之后就是 Free Space  |
+| PAGE_N_HEAP       | 2 字节       | 本页中的记录的数量（包括最小和最大记录以及标记为删除的记录） |
+| PAGE_FREE         | 2 字节       | 第一个已经标记为删除的记录地址（各个已删除的记录通过 next_record 也会组成一个单链 表，这个单链表中的记录可以被重新利用） |
+| PAGE_GARBAGE      | 2 字节       | 已删除记录占用的字节数                                       |
+| PAGE_LAST_INSERT  | 2 字节       | 最后插入记录的位置                                           |
+| PAGE_DIRECTION    | 2 字节       | 记录插入的方向                                               |
+| PAGE_N_DIRECTION  | 2 字节       | 一个方向连续插入的记录数量                                   |
+| PAGE_N_RECS       | 2 字节       | 该页中记录的数量（不包括最小和最大记录以及被标记为删除的记录） |
+| PAGE_MAX_TRX_ID   | 2 字节       | 修改当前页的最大事务ID，该值仅在二级索引中定义               |
+| PAGE_LEVEL        | 2 字节       | 当前页在B+树中所处的层级                                     |
+| PAGE_INDEX_ID     | 8 字节       | 索引ID，表示当前页属于哪个索引                               |
+| PAGE_BTR_SEG_LEAF | 10 字节      | B+树叶子段的头部信息，仅在B+树的Root页定义                   |
+| PAGE_BTR_SEG_TOP  | 10 字节      | B+树非叶子段的头部信息，仅在B+树的Root页定义                 |
 
 
+
+#### File Header（文件头部）
+
+File Header 针对各种类型的页都通用，也就是说不同类型的页都会以 File Header 作 为第一个组成部分，它描述了一些针对各种页都通用的一些信息，这个部分占用固定的 38 个字节。
+
+| 名称                             | 占用空间大小 | 描述                                                         |
+| -------------------------------- | ------------ | ------------------------------------------------------------ |
+| FIL_PAGE_SPACE_OR_CHKSUM         | 4 字节       | 页的校验和（checksum值）                                     |
+| FIL_PAGE_OFFSET                  | 4 字节       | 页号（InnoDB 通过页号来可以唯一定位一个页）                  |
+| FIL_PAGE_PREV                    | 4 字节       | 上一个页的页号                                               |
+| FIL_PAGE_NEXT                    | 4 字节       | 下一个页的页号                                               |
+| FIL_PAGE_LSN                     | 8 字节       | 页面被最后修改时对应的日志序列位置（英文名是：Log Sequence Number） |
+| FIL_PAGE_TYPE                    | 2 字节       | 该页的类型                                                   |
+| FIL_PAGE_FILE_FLUSH_LSN          | 8 字节       | 仅在系统表空间的一个页中定义，代表文件至少被刷新到了对应的LSN值 |
+| FIL_PAGE_ARCH_LOG_NO_OR_SPACE_ID | 4 字节       | 页属于哪个表空间                                             |
+
+- FIL_PAGE_TYP
+
+​      InnoDB 为了不同的目的把页分为不同的类型，具体如下表：
+
+| 类型名称                | 十六进制 | 描述                            |
+| ----------------------- | -------- | ------------------------------- |
+| FIL_PAGE_TYPE_ALLOCATED | 0x0000   | 最新分配，还没使用              |
+| FIL_PAGE_UNDO_LOG       | 0x0002   | Undo日志页                      |
+| FIL_PAGE_INODE          | 0x0003   | 段信息节点                      |
+| FIL_PAGE_IBUF_FREE_LIST | 0x0004   | Insert Buffer空闲列表           |
+| FIL_PAGE_IBUF_BITMAP    | 0x0005   | Insert Buffer位图               |
+| FIL_PAGE_TYPE_SYS       | 0x0006   | 系统页                          |
+| FIL_PAGE_TYPE_TRX_SYS   | 0x0007   | 事务系统数据                    |
+| FIL_PAGE_TYPE_FSP_HDR   | 0x0008   | 表空间头部信息                  |
+| FIL_PAGE_TYPE_XDES      | 0x0009   | 扩展描述页                      |
+| FIL_PAGE_TYPE_BLOB      | 0x000A   | BLOB页                          |
+| FIL_PAGE_INDEX          | 0x45BF   | 索引页，也就是我们所说的 数据页 |
+
+- FIL_PAGE_PREV 和 FIL_PAGE_NEXT
+
+ InnoDB 都是以页为单位存放数据的， FIL_PAGE_PREV 和 FIL_PAGE_NEXT可以把分散的多个不连续的页关联起来建立一个双向链表。（并不是所有类型的页都有上一个和下一个页的属性）
+
+​                 ![File Header](./images/File Header.png)
+
+#### File Trailer
+
+为了检测一个页是否完整（也就是在同步的时候有没有发生只同步 一半的尴尬情况），InnoDB 在每个页的尾部都加了一个 File Trailer 部分，这个部分由 8 个字 节组成，可以分成2个小部分：
+
+- 前4个字节代表页的校验和
+
+​        这个部分是和 File Header 中的校验和相对应的。每当一个页面在内存中修改了，在同步之前就要把它的校 验和算出来，因为 File Header 在页面的前边，所以校验和会被首先同步到磁盘，当完全写完时，校验和也 会被写到页的尾部，如果完全同步成功，则页的首部和尾部的校验和应该是一致的。如果写了一半儿断电 了，那么在 File Header 中的校验和就代表着已经修改过的页，而在 File Trialer 中的校验和代表着原先 的页，二者不同则意味着同步中间出了错。
+
+- 后4个字节代表页面被最后修改时对应的日志序列位置（LSN）
+
+​      这个部分也是为了校验页的完整性的
+
+### 快速查询的秘籍-B+树索引
