@@ -47,6 +47,7 @@
         <module>redis</module>
         <module>thread-pattern</module>
         <module>mysql</module>
+        <module>liunx</module>
     </modules>
 
 </project>
