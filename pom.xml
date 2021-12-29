@@ -48,6 +48,7 @@
         <module>thread-pattern</module>
         <module>mysql</module>
         <module>liunx</module>
+        <module>netty</module>
     </modules>
 
 </project>
