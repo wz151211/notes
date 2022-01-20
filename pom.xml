@@ -49,6 +49,7 @@
         <module>mysql</module>
         <module>liunx</module>
         <module>netty</module>
+        <module>pattern</module>
     </modules>
 
 </project>
